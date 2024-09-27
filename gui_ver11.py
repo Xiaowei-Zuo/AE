@@ -173,28 +173,28 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
             self.lineEdit_HY1_ymax,
             self.lineEdit_HY1_tick,
         ]
-        # self.HY2_guiRelated = [
-        #     self.pushButton_HY2_minmax,
-        #     self.pushButton_HY2_startPlot,
-        #     self.pushButton_HY2_endPlot,
-        #     self.pushButton_HY2_startRec,
-        #     self.pushButton_HY2_endRec,
-        #     self.pushButton_HY2_save,
-        #     self.lineEdit_HY2_ymin,
-        #     self.lineEdit_HY2_ymax,
-        #     self.lineEdit_HY2_tick,
-        # ]
-        # self.VB1_guiRelated = [
-        #     self.pushButton_VB1_minmax,
-        #     self.pushButton_VB1_startPlot,
-        #     self.pushButton_VB1_endPlot,
-        #     self.pushButton_VB1_startRec,
-        #     self.pushButton_VB1_endRec,
-        #     self.pushButton_VB1_save,
-        #     self.lineEdit_VB1_ymin,
-        #     self.lineEdit_VB1_ymax,
-        #     self.lineEdit_VB1_tick,
-        # ]
+        self.HY2_guiRelated = [
+            self.pushButton_HY2_minmax,
+            self.pushButton_HY2_startPlot,
+            self.pushButton_HY2_endPlot,
+            self.pushButton_HY2_startRec,
+            self.pushButton_HY2_endRec,
+            self.pushButton_HY2_save,
+            self.lineEdit_HY2_ymin,
+            self.lineEdit_HY2_ymax,
+            self.lineEdit_HY2_tick,
+        ]
+        self.VB1_guiRelated = [
+            self.pushButton_VB1_minmax,
+            self.pushButton_VB1_startPlot,
+            self.pushButton_VB1_endPlot,
+            self.pushButton_VB1_startRec,
+            self.pushButton_VB1_endRec,
+            self.pushButton_VB1_save,
+            self.lineEdit_VB1_ymin,
+            self.lineEdit_VB1_ymax,
+            self.lineEdit_VB1_tick,
+        ]
 
     def restrain_buttons_forSetUp(self):
         # sensors_gui = [self.ALL_guiRelated, self.HY1_guiRelated, self.HY2_guiRelated, self.VB1_guiRelated]

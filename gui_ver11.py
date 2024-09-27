@@ -71,8 +71,8 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
 
         # Input selection for each sensor
         self.comboBox_HY1.addItems(self.audio_prompt)
-        self.comboBox_HY2.addItems(self.audio_prompt)
-        self.comboBox_VB1.addItems(self.NI_prompt)
+        # self.comboBox_HY2.addItems(self.audio_prompt)
+        # self.comboBox_VB1.addItems(self.NI_prompt)
 
         # Check if all sensor inputs are selected
         self.pushButton_checkSetUp.clicked.connect(lambda: self.checkSetUp())
@@ -80,43 +80,43 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
     def define_HY1(self, name):  # Hydrophone #1
         self.HY1 = gui_support_ver11.audio(name="HY1", chunk=4096, displayL=40960, device=self.audio_devices_list.index(name))
         self.HY1_plot = gui_support_ver11.plotting(self.HY1, self.HY1_canvas, self.HY1_canvasf, 17)
-
-    def define_HY2(self, name):  # Hydrophone #1
-        self.HY2 = gui_support_ver11.audio(name="HY2", chunk=4096, displayL=40960, device=self.audio_devices_list.index(name))
-        self.HY2_plot = gui_support_ver11.plotting(self.HY2, self.HY2_canvas, self.HY2_canvasf, 19)
-
-    def define_VB1(self, channel):  # Vibration Sensor #1
-        self.VB1 = gui_support_ver11.NI(name="VB1", device='myDAQ1', fs=40000, chunk=4000, displayL=40000, channel=channel)
-        self.VB1_plot = gui_support_ver11.plotting(self.VB1, self.VB1_canvas, self.VB1_canvasf, 10)
+    #
+    # def define_HY2(self, name):  # Hydrophone #1
+    #     self.HY2 = gui_support_ver11.audio(name="HY2", chunk=4096, displayL=40960, device=self.audio_devices_list.index(name))
+    #     self.HY2_plot = gui_support_ver11.plotting(self.HY2, self.HY2_canvas, self.HY2_canvasf, 19)
+    #
+    # def define_VB1(self, channel):  # Vibration Sensor #1
+    #     self.VB1 = gui_support_ver11.NI(name="VB1", device='myDAQ1', fs=40000, chunk=4000, displayL=40000, channel=channel)
+    #     self.VB1_plot = gui_support_ver11.plotting(self.VB1, self.VB1_canvas, self.VB1_canvasf, 10)
 
     def checkSetUp(self):  # If input selections are complete, proceed to defining all the sensors
         if (
                 self.comboBox_HY1.currentText() in self.audio_devices_list
-                and
-                self.comboBox_HY2.currentText() in self.audio_devices_list
-                and
-                self.comboBox_VB1.currentText() in self.NI_channels_list
+                # and
+                # self.comboBox_HY2.currentText() in self.audio_devices_list
+                # and
+                # self.comboBox_VB1.currentText() in self.NI_channels_list
                 and
                 True
         ):
 
             self.pushButton_checkSetUp.setEnabled(False)
             self.comboBox_HY1.setEnabled(False)
-            self.comboBox_HY2.setEnabled(False)
-            self.comboBox_VB1.setEnabled(False)
+            # self.comboBox_HY2.setEnabled(False)
+            # self.comboBox_VB1.setEnabled(False)
 
             self.define_HY1(self.comboBox_HY1.currentText())
-            self.define_HY2(self.comboBox_HY2.currentText())
-            self.define_VB1(self.comboBox_VB1.currentText())
+            # self.define_HY2(self.comboBox_HY2.currentText())
+            # self.define_VB1(self.comboBox_VB1.currentText())
 
             self.connectToGUI(self.HY1, self.HY1_plot, self.HY1_guiRelated)
-            self.connectToGUI(self.HY2, self.HY2_plot, self.HY2_guiRelated)
-            self.connectToGUI(self.VB1, self.VB1_plot, self.VB1_guiRelated)
+            # self.connectToGUI(self.HY2, self.HY2_plot, self.HY2_guiRelated)
+            # self.connectToGUI(self.VB1, self.VB1_plot, self.VB1_guiRelated)
 
             self.sensor_set = [
                 [self.HY1_plot, self.HY1_guiRelated],
-                [self.HY2_plot, self.HY2_guiRelated],
-                [self.VB1_plot, self.VB1_guiRelated],
+                # [self.HY2_plot, self.HY2_guiRelated],
+                # [self.VB1_plot, self.VB1_guiRelated],
             ]
 
             self.pushButton_ALL_startPlot.clicked.connect(lambda: self.startPlot_ALL())
@@ -143,16 +143,16 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
         self.ui.gridLayout_2.addWidget(self.HY1_canvas, 1, 1, 1, 1)
         self.HY1_canvasf = MplCanvas(self, width=5, height=4, dpi=100)
         self.ui.gridLayout_2.addWidget(self.HY1_canvasf, 1, 2, 1, 1)
-
-        self.HY2_canvas = MplCanvas(self, width=5, height=4, dpi=100)
-        self.ui.gridLayout_9.addWidget(self.HY2_canvas, 1, 1, 1, 1)
-        self.HY2_canvasf = MplCanvas(self, width=5, height=4, dpi=100)
-        self.ui.gridLayout_9.addWidget(self.HY2_canvasf, 1, 2, 1, 1)
-
-        self.VB1_canvas = MplCanvas(self, width=5, height=4, dpi=100)
-        self.ui.gridLayout_15.addWidget(self.VB1_canvas, 1, 1, 1, 1)
-        self.VB1_canvasf = MplCanvas(self, width=5, height=4, dpi=100)
-        self.ui.gridLayout_15.addWidget(self.VB1_canvasf, 1, 2, 1, 1)
+        #
+        # self.HY2_canvas = MplCanvas(self, width=5, height=4, dpi=100)
+        # self.ui.gridLayout_9.addWidget(self.HY2_canvas, 1, 1, 1, 1)
+        # self.HY2_canvasf = MplCanvas(self, width=5, height=4, dpi=100)
+        # self.ui.gridLayout_9.addWidget(self.HY2_canvasf, 1, 2, 1, 1)
+        #
+        # self.VB1_canvas = MplCanvas(self, width=5, height=4, dpi=100)
+        # self.ui.gridLayout_15.addWidget(self.VB1_canvas, 1, 1, 1, 1)
+        # self.VB1_canvasf = MplCanvas(self, width=5, height=4, dpi=100)
+        # self.ui.gridLayout_15.addWidget(self.VB1_canvasf, 1, 2, 1, 1)
 
     def define_all_guiRelated(self):
         self.ALL_guiRelated = [
@@ -173,31 +173,32 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
             self.lineEdit_HY1_ymax,
             self.lineEdit_HY1_tick,
         ]
-        self.HY2_guiRelated = [
-            self.pushButton_HY2_minmax,
-            self.pushButton_HY2_startPlot,
-            self.pushButton_HY2_endPlot,
-            self.pushButton_HY2_startRec,
-            self.pushButton_HY2_endRec,
-            self.pushButton_HY2_save,
-            self.lineEdit_HY2_ymin,
-            self.lineEdit_HY2_ymax,
-            self.lineEdit_HY2_tick,
-        ]
-        self.VB1_guiRelated = [
-            self.pushButton_VB1_minmax,
-            self.pushButton_VB1_startPlot,
-            self.pushButton_VB1_endPlot,
-            self.pushButton_VB1_startRec,
-            self.pushButton_VB1_endRec,
-            self.pushButton_VB1_save,
-            self.lineEdit_VB1_ymin,
-            self.lineEdit_VB1_ymax,
-            self.lineEdit_VB1_tick,
-        ]
+        # self.HY2_guiRelated = [
+        #     self.pushButton_HY2_minmax,
+        #     self.pushButton_HY2_startPlot,
+        #     self.pushButton_HY2_endPlot,
+        #     self.pushButton_HY2_startRec,
+        #     self.pushButton_HY2_endRec,
+        #     self.pushButton_HY2_save,
+        #     self.lineEdit_HY2_ymin,
+        #     self.lineEdit_HY2_ymax,
+        #     self.lineEdit_HY2_tick,
+        # ]
+        # self.VB1_guiRelated = [
+        #     self.pushButton_VB1_minmax,
+        #     self.pushButton_VB1_startPlot,
+        #     self.pushButton_VB1_endPlot,
+        #     self.pushButton_VB1_startRec,
+        #     self.pushButton_VB1_endRec,
+        #     self.pushButton_VB1_save,
+        #     self.lineEdit_VB1_ymin,
+        #     self.lineEdit_VB1_ymax,
+        #     self.lineEdit_VB1_tick,
+        # ]
 
     def restrain_buttons_forSetUp(self):
-        sensors_gui = [self.ALL_guiRelated, self.HY1_guiRelated, self.HY2_guiRelated, self.VB1_guiRelated]
+        # sensors_gui = [self.ALL_guiRelated, self.HY1_guiRelated, self.HY2_guiRelated, self.VB1_guiRelated]
+        sensors_gui = [self.ALL_guiRelated, self.HY1_guiRelated]
         restrained_forSetUp = []
         for sensor in sensors_gui:
             restrained_forSetUp.extend(sensor)

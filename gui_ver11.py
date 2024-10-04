@@ -24,7 +24,7 @@ import csv
 import pyaudio
 import wave
 import mytime
-import gui_support_ver11
+import gui_support
 from tkinter import Tk, filedialog
 # import PIL.Image
 from PIL import Image
@@ -34,6 +34,8 @@ import os
 import cv2
 import matplotlib.pyplot as plt
 from pathlib import Path
+
+print("yes")
 
 input_audio_deviceInfos = QAudioDeviceInfo.availableDevices(QAudio.AudioInput)
 print(input_audio_deviceInfos)
@@ -78,16 +80,16 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
         self.pushButton_checkSetUp.clicked.connect(lambda: self.checkSetUp())
 
     def define_HY1(self, name):  # Hydrophone #1
-        self.HY1 = gui_support_ver11.audio(name="HY1", chunk=4096, displayL=40960, device=self.audio_devices_list.index(name))
-        self.HY1_plot = gui_support_ver11.plotting(self.HY1, self.HY1_canvas, self.HY1_canvasf, 17)
+        self.HY1 = gui_support.audio(name="HY1", chunk=4096, displayL=40960, device=self.audio_devices_list.index(name))
+        self.HY1_plot = gui_support.plotting(self.HY1, self.HY1_canvas, self.HY1_canvasf, 17)
     #
-    # def define_HY2(self, name):  # Hydrophone #1
-    #     self.HY2 = gui_support_ver11.audio(name="HY2", chunk=4096, displayL=40960, device=self.audio_devices_list.index(name))
-    #     self.HY2_plot = gui_support_ver11.plotting(self.HY2, self.HY2_canvas, self.HY2_canvasf, 19)
-    #
-    # def define_VB1(self, channel):  # Vibration Sensor #1
-    #     self.VB1 = gui_support_ver11.NI(name="VB1", device='myDAQ1', fs=40000, chunk=4000, displayL=40000, channel=channel)
-    #     self.VB1_plot = gui_support_ver11.plotting(self.VB1, self.VB1_canvas, self.VB1_canvasf, 10)
+    def define_HY2(self, name):  # Hydrophone #1
+        self.HY2 = gui_support.audio(name="HY2", chunk=4096, displayL=40960, device=self.audio_devices_list.index(name))
+        self.HY2_plot = gui_support.plotting(self.HY2, self.HY2_canvas, self.HY2_canvasf, 19)
+
+    def define_VB1(self, channel):  # Vibration Sensor #1
+        self.VB1 = gui_support.NI(name="VB1", device='myDAQ1', fs=40000, chunk=4000, displayL=40000, channel=channel)
+        self.VB1_plot = gui_support.plotting(self.VB1, self.VB1_canvas, self.VB1_canvasf, 10)
 
     def checkSetUp(self):  # If input selections are complete, proceed to defining all the sensors
         if (
@@ -380,7 +382,7 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
         #     data = pickle.load(handle)
             # # Plot the fft
             # filename = Path(filenameNpath).stem
-            # gui_support_ver11.quickfft(data, fs, filename)
+            # gui_support.quickfft(data, fs, filename)
 
 
 app = QtWidgets.QApplication(sys.argv)

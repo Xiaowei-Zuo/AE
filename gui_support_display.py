@@ -51,8 +51,14 @@ from tkinter import Tk, filedialog
 # import pyfftw
 
 
+def myDAQ(device):
+    device.DAQ()
+
+
 class NI():
-    def __init__(self, name, device, channel, fs, chunk, displayL):
+    def __init__(
+            self, name, device, channel,
+            fs, chunk, displayL):
         self.name = name  # "VB"
         self.device = device
         self.channel = channel
@@ -60,7 +66,7 @@ class NI():
         self.chunk = chunk
         self.history = np.zeros((displayL,))
 
-        self.q = queue.Queue()
+        self.q = multiprocessing.Queue()
 
     def start_thread(self):
         self.thread = Thread(target=self.DAQ)
@@ -71,6 +77,7 @@ class NI():
     #     self.thread.join()
 
     def DAQ(self):
+        # while True:
         with nidaqmx.Task() as task:
             task.ai_channels.add_ai_voltage_chan(f"{self.device}/{self.channel}")
             task.timing.cfg_samp_clk_timing(self.fs,
@@ -78,16 +85,21 @@ class NI():
                                             samps_per_chan=self.chunk)
             data = task.read(number_of_samples_per_channel=self.chunk)
             self.q.put(data)
+            print("NI DAQ qsize:", self.q.qsize())
+                # print(self.q.get())
+                # print(self.q.get())
 
 
 class audio():
-    def __init__(self, name, device, chunk, displayL):
+    def __init__(
+            self, name, device,
+            chunk, displayL):
         self.name = name  # "HY"
         self.fs = 44100  # Default for audio
         self.chunk = chunk
         self.history = np.zeros((displayL,))
 
-        self.q = queue.Queue()
+        self.q = multiprocessing.Queue()
 
         self.p = pyaudio.PyAudio()
         print("audio device:", device)
@@ -99,7 +111,7 @@ class audio():
                                     input_device_index=device)
 
     def start_thread(self):
-        self.thread = Thread(target=self.audio_DAQ)
+        self.thread = Thread(target=self.DAQ)
         self.thread.start()
         self.thread.join()
 
@@ -107,24 +119,40 @@ class audio():
     #     self.p.close(self.inStream)
     #     self.thread.join()
 
-    def audio_DAQ(self):
+    def start_DAQ(self):
+        p = multiprocessing.Process(target=self.DAQ)
+
+    def DAQ(self):
+        # while True:
         audioString = self.inStream.read(self.chunk)
         data = np.fromstring(audioString, dtype=np.int16)/1000
         data = data.tolist()
         self.q.put(data)
+        print("audio DAQ qsize:", self.q.qsize())
 
 
 class plotting():
-    def __init__(self, sensor, canvas, canvas_2, updateInterval, linewidth, ymin, ymax, tick, detect=None, btn_status=None, predict=None, btn_loc=None):
+    def __init__(
+            self, sensor, canvas, canvas_2, updateInterval,
+            linewidth=.2, ymin=-10, ymax=10, tick=5, ):
         self.sensor = sensor
         self.q = sensor.q
 
-        self.detect = detect
-        self.btn_status = btn_status
-        self.predict = predict
+        self.detect = None
+        self.btn_displayDetSta = None
+        self.btn_displayDetLoc = None
+        self.btn_displayDetTip = None
+        self.detected = False
+
+        self.predict = None
+        self.btn_displayPrdSta = None
+        self.btn_displayPrdLoc = None
+        self.btn_displayPrdTip = None
         self.predicted = False
-        self.btn_loc = btn_loc
-        self.loc = round(np.random.rand() * 10, 2)
+
+        # self.loc = round(np.random.rand() * 10, 1)
+        self.detLoc = 1.2
+        self.prdLoc = 3.7
 
         self.history = sensor.history
 
@@ -136,13 +164,13 @@ class plotting():
 
         self.ref_plot = None
 
-
         self.timer = QtCore.QTimer()
         self.updateInterval = updateInterval
 
         self.recording = False
         self.recorded = []
 
+        self.auto = False
         self.ymin = ymin
         self.ymax = ymax
         self.tick = tick
@@ -152,6 +180,7 @@ class plotting():
             self.history_2 = None
             self.canvas_2 = canvas_2
             self.ref_plot_2 = None
+            self.auto_2 = False
 
     def start_thread(self):
         self.thread = Thread(target=self.start)
@@ -162,22 +191,33 @@ class plotting():
         block = True  # Works for vibra if True
         try:
             new_data = self.q.get(block=block)
+            print(len(new_data))
             # print("shape:|", np.array(new_data).shape)
 
             if self.detect:
-                if any(ele > 1.5 for ele in new_data):
-                    gui_display.update_button(self.btn_status, 'red', 'LEAK DETECTED!')
+                if (any(ele > 0 for ele in new_data)) and (self.predicted is False):
+                    gui_display.update_button(self.btn_displayDetSta, 'red', 'LEAK DETECTED!')
+                    gui_display.update_button(self.btn_displayDetLoc, 'red', str(self.detLoc)+'m from sensor 1')
+                    gui_display.update_button(self.btn_displayDetTip, 'red', 'repair valve')
+                    self.detected = True
                 else:
-                    gui_display.update_button(self.btn_status, 'green', 'normal')
+                    gui_display.update_button(self.btn_displayDetSta, 'green', 'normal')
+                    gui_display.update_button(self.btn_displayDetLoc, 'green', 'normal')
+                    gui_display.update_button(self.btn_displayDetTip, 'green', 'normal')
+                    self.detected = False
+
             if self.predict:
-                # self.loc = round(np.random.rand() * 10, 2)
-                if any(ele > 1.5 for ele in new_data):
-                    # if self.loc==None:
-                    text = str(self.loc)+'m'
-                    # self.predicted = True
-                    gui_display.update_button(self.btn_loc, 'red', text)
+                if (any(ele > 0 for ele in new_data)) and (self.detected is False):
+                    gui_display.update_button(self.btn_displayPrdSta, 'orange', 'Leak Warning!')
+                    gui_display.update_button(self.btn_displayPrdLoc, 'orange', str(self.prdLoc) + 'm from sensor 1')
+                    gui_display.update_button(self.btn_displayPrdTip, 'orange', 'repair valve')
+                    self.predicted = True
                 else:
-                    gui_display.update_button(self.btn_loc, 'green', 'normal')
+                    gui_display.update_button(self.btn_displayPrdSta, 'green', 'normal')
+                    gui_display.update_button(self.btn_displayPrdLoc, 'green', 'normal')
+                    gui_display.update_button(self.btn_displayPrdTip, 'green', 'normal')
+                    self.predicted = False
+
             ###########################
             shift = len(new_data)
             if self.second_plot:
@@ -213,9 +253,11 @@ class plotting():
         start, end = self.canvas.axes.get_ylim()
         self.canvas.axes.yaxis.set_ticks(np.arange(start, end, self.tick))
         self.canvas.axes.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1f'))
-        #     self.canvas.axes.relim()
-        #     self.canvas.axes.autoscale_view()
-        self.canvas.axes.set_ylim(ymin=self.ymin, ymax=self.ymax)
+        if (self.ymin is None) and (self.ymax is None):
+            self.canvas.axes.relim()
+            self.canvas.axes.autoscale_view()
+        else:
+            self.canvas.axes.set_ylim(ymin=self.ymin, ymax=self.ymax)
         self.canvas.draw()
 
         if self.second_plot:
@@ -223,9 +265,11 @@ class plotting():
             start, end = self.canvas_2.axes.get_ylim()
             self.canvas_2.axes.yaxis.set_ticks(np.arange(start, end, self.tick))
             self.canvas_2.axes.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1f'))
-            #     self.canvas.axes.relim()
-            #     self.canvas.axes.autoscale_view()
-            self.canvas_2.axes.set_ylim(ymin=self.ymin, ymax=self.ymax)
+            if self.auto_2:
+                self.canvas_2.axes.relim()
+                self.canvas_2.axes.autoscale_view()
+            else:
+                self.canvas_2.axes.set_ylim(ymin=self.ymin, ymax=self.ymax)
             self.canvas_2.draw()
 
         # Freq domain

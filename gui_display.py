@@ -1,6 +1,5 @@
 import matplotlib
 import pickle
-
 matplotlib.use('Qt5Agg')  # To make it fast!
 import sys
 import pandas as pd
@@ -34,10 +33,10 @@ import os
 import cv2
 import matplotlib.pyplot as plt
 from pathlib import Path
-
+import multiprocessing
 
 input_audio_deviceInfos = QAudioDeviceInfo.availableDevices(QAudio.AudioInput)
-print(input_audio_deviceInfos)
+# print(input_audio_deviceInfos)
 
 
 class MplCanvas(FigureCanvas):
@@ -49,212 +48,228 @@ class MplCanvas(FigureCanvas):
 
 
 def update_plot(sensor, plot):
-    sensor.start_thread()  # q.put()
+    sensor.DAQ()  # q.put()
     plot.start_thread()  # q.get()
 
-def update_button(btn, bgcolor, text):
-    if bgcolor=='green':
-        bgcolor='(0, 255, 0)'
-    if bgcolor=='yellow':
-        bgcolor = '(255, 255, 0)'
-    if bgcolor=='red':
-        bgcolor = '(255, 0, 0)'
-    if bgcolor=='grey':
-        bgcolor = '(156, 156, 156)'
-    str_bgcolor = 'background-color: rgb'+bgcolor+';'
 
-    string = str_bgcolor+'font: 63 15pt "Segoe UI Semibold";'
+def update_button(btn, bgcolor, text):
+    if bgcolor == 'red':
+        bgcolor = '(255, 0, 0)'
+    if bgcolor == 'orange':
+        bgcolor = '(255, 137, 2)'
+    if bgcolor == 'yellow':
+        bgcolor = '(255, 255, 0)'
+    if bgcolor == 'green':
+        bgcolor = '(0, 255, 0)'
+    if bgcolor == 'grey':
+        bgcolor = '(156, 156, 156)'
+    str_bgcolor = 'background-color: rgb' + bgcolor + ';'
+
+    string = str_bgcolor + 'font: 63 15pt "Segoe UI Semibold";'
 
     btn.setStyleSheet(string)
     btn.setText(text)
 
+
 class LIVE_PLOT_APP(QtWidgets.QMainWindow):
     # Define all initial values/states
     def __init__(self):
-        # self.threadpool = QtCore.QThreadPool()
         QtWidgets.QMainWindow.__init__(self)
         self.ui = uic.loadUi('myui_display_ver2.ui', self)  # Load the user interface file
         self.resize(888, 600)
 
-        self.define_plot_widgets()  # Define all the canvases: grouped together for easier adaption to ui
-        self.define_all_guiRelated()  # Define all the guiRelated slots (buttons and lineEdits) for each sensor
+        # self.p_DAQ_VB.start()
+        self.HY = True
+        self.VB = True
+        self.AE = True
+        # self.HY1 = True
+        # self.HY2 = False
+        # self.VB1 = True
+        # self.VB2 = False
+        # self.AE1 = True
+        # self.AE2 = False
+        self.setUp = True
 
-        self.restrain_buttons_forSetUp()
-        self.checkSetUp(self.guiRelated_ALL)
+        if self.HY:
+            self.canvas_HY = MplCanvas(self, width=5, height=4, dpi=100)
+            self.ui.gridLayout_10.addWidget(self.canvas_HY, 1, 1, 1, 2)
+            self.canvas_HY_2 = MplCanvas(self, width=5, height=4, dpi=100)
+            self.ui.gridLayout_12.addWidget(self.canvas_HY_2, 1, 1, 1, 2)
 
-    def define_HY(self):  # Hydrophone #1
-        self.HY = gui_support_display.audio(name="HY", chunk=4096, displayL=5120, device=1)
-        self.plot_HY = gui_support_display.plotting(self.HY, self.canvas_HY, self.canvas_HY_2, 17, linewidth=.2, ymin=-2, ymax=2, tick=.5)
-        pass
+            self.HY = gui_support_display.audio(
+                name="HY", device=1,
+                chunk=4096, displayL=5120, )
+            self.plot_HY = gui_support_display.plotting(
+                self.HY, self.canvas_HY, self.canvas_HY_2, updateInterval=17,
+                linewidth=1, ymin=-10, ymax=10, tick=5, )
 
-    def define_VB(self):  # Vibration Sensor
-        self.VB = gui_support_display.NI(name="VB", device='Dev2', fs=40000, chunk=256, displayL=500, channel="ai0")
-        self.plot_VB = gui_support_display.plotting(self.VB, self.canvas_VB, self.canvas_VB_2, 10, linewidth=1, ymin=-.8, ymax=0, tick=.1)
-        # self.VB = gui_support_display.audio(name="VB", chunk=2048, displayL=20480, device=2)
-        # self.plot_VB = gui_support_display.plotting(self.VB, self.canvas_VB, self.canvas_VB_2, 17)
+            self.guiRelated_HY = [
+                self.lineEdit_ymin_HY_1,
+                self.lineEdit_ymax_HY_1,
+                self.pushButton_minmax_HY_1,
+                self.pushButton_auto_HY_1,
+                self.pushButton_startPlot_HY_1,
+                self.pushButton_endPlot_HY_1,
+                self.pushButton_startRec_HY_1,
+                self.pushButton_endRec_HY_1,
+                self.pushButton_save_HY_1,
+                self.lineEdit_ymin_HY_2,
+                self.lineEdit_ymax_HY_2,
+                self.pushButton_minmax_HY_2,
+                self.pushButton_auto_HY_2,
+                self.pushButton_startPlot_HY_2,
+                self.pushButton_endPlot_HY_2,
+                self.pushButton_startRec_HY_2,
+                self.pushButton_endRec_HY_2,
+                self.pushButton_save_HY_2,
+            ]
+            self.connectToGUI(self.HY, self.plot_HY, self.guiRelated_HY)
 
-    def define_AE(self):  # AE Sensor
-        self.AE = gui_support_display.NI(name="AE", device='Dev2', fs=40000, chunk=256, displayL=500, channel="ai1")
-        self.plot_AE = gui_support_display.plotting(self.AE, self.canvas_AE, self.canvas_AE_2, 7, linewidth=1, ymin=-.5, ymax=3, tick=.5, btn_status=self.pushButton_status, btn_loc=self.pushButton_location)
+        if self.VB:
+            self.canvas_VB = MplCanvas(self, width=5, height=4, dpi=100)
+            self.ui.gridLayout_14.addWidget(self.canvas_VB, 1, 1, 1, 2)
+            self.canvas_VB_2 = MplCanvas(self, width=5, height=4, dpi=100)
+            self.ui.gridLayout_16.addWidget(self.canvas_VB_2, 1, 1, 1, 2)
 
-    def checkSetUp(self, guiRelated_ALL):  # If input selections are complete, proceed to defining all the sensors
-        if True:
-            self.define_HY()
-            self.define_VB()
-            self.define_AE()
+            self.VB = gui_support_display.NI(
+                name="VB", device='Dev2', channel="ai0",
+                fs=40000, chunk=256, displayL=5000,)
+            self.plot_VB = gui_support_display.plotting(
+                self.VB, self.canvas_VB, self.canvas_VB_2, updateInterval=10,
+                linewidth=1, ymin=-1, ymax=1, tick=.5, )
 
-            # self.connectToGUI(self.HY, self.plot_HY, self.guiRelated_HY)
+            self.guiRelated_VB = [
+                self.lineEdit_ymin_VB_1,
+                self.lineEdit_ymax_VB_1,
+                self.pushButton_minmax_VB_1,
+                self.pushButton_auto_VB_1,
+                self.pushButton_startPlot_VB_1,
+                self.pushButton_endPlot_VB_1,
+                self.pushButton_startRec_VB_1,
+                self.pushButton_endRec_VB_1,
+                self.pushButton_save_VB_1,
+                self.lineEdit_ymin_VB_2,
+                self.lineEdit_ymax_VB_2,
+                self.pushButton_minmax_VB_2,
+                self.pushButton_auto_VB_2,
+                self.pushButton_startPlot_VB_2,
+                self.pushButton_endPlot_VB_2,
+                self.pushButton_startRec_VB_2,
+                self.pushButton_endRec_VB_2,
+                self.pushButton_save_VB_2,
+            ]
             self.connectToGUI(self.VB, self.plot_VB, self.guiRelated_VB)
+
+        if self.AE:
+            self.canvas_AE = MplCanvas(self, width=5, height=4, dpi=100)
+            self.ui.gridLayout_18.addWidget(self.canvas_AE, 1, 1, 1, 2)
+            self.canvas_AE_2 = MplCanvas(self, width=5, height=4, dpi=100)
+            self.ui.gridLayout_20.addWidget(self.canvas_AE_2, 1, 1, 1, 2)
+
+            self.AE = gui_support_display.NI(
+                name="AE", device='Dev2', channel="ai0",
+                fs=40000, chunk=256, displayL=5000,)
+            self.plot_AE = gui_support_display.plotting(
+                self.AE, self.canvas_AE, self.canvas_AE_2, updateInterval=7,
+                linewidth=1, ymin=-1, ymax=1, tick=.5, )
+
+            self.guiRelated_AE = [
+                self.lineEdit_ymin_AE_1,
+                self.lineEdit_ymax_AE_1,
+                self.pushButton_minmax_AE_1,
+                self.pushButton_auto_AE_1,
+                self.pushButton_startPlot_AE_1,
+                self.pushButton_endPlot_AE_1,
+                self.pushButton_startRec_AE_1,
+                self.pushButton_endRec_AE_1,
+                self.pushButton_save_AE_1,
+                self.lineEdit_ymin_AE_2,
+                self.lineEdit_ymax_AE_2,
+                self.pushButton_minmax_AE_2,
+                self.pushButton_auto_AE_2,
+                self.pushButton_startPlot_AE_2,
+                self.pushButton_endPlot_AE_2,
+                self.pushButton_startRec_AE_2,
+                self.pushButton_endRec_AE_2,
+                self.pushButton_save_AE_2,
+            ]
             self.connectToGUI(self.AE, self.plot_AE, self.guiRelated_AE)
 
-            SM, EM, SPR, EPR, btn_status, btn_loc, label_status, label_loc = guiRelated_ALL
+        if self.setUp:
+            plot_det = self.plot_VB
+            plot_prd = self.plot_AE
 
-            plot_detect = self.plot_AE
-            SM.clicked.connect(lambda: self.startMNT(self.guiRelated_ALL, plot_detect))
-            EM.clicked.connect(lambda: self.endMNT(self.guiRelated_ALL, plot_detect))
-            SPR.clicked.connect(lambda: self.startPRED(self.guiRelated_ALL, plot_detect))
-            EPR.clicked.connect(lambda: self.endPRED(self.guiRelated_ALL, plot_detect))
-            SM.setEnabled(True)
-            SPR.setEnabled(True)
+            self.btn_sDet.clicked.connect(lambda: self.startDet(plot_det))
+            self.btn_eDet.clicked.connect(lambda: self.endDet(plot_det))
 
-    def startMNT(self, guiRelated_ALL, plot_detect):
-        SM, EM, SPR, EPR, btn_status, btn_loc, label_status, label_loc = guiRelated_ALL
-        SM.setEnabled(False)
-        EM.setEnabled(True)
-        label_status.setEnabled(True)
-        btn_status.setEnabled(True)
-        update_button(btn_status, 'green', 'normal')
-        plot_detect.detect=True
+            self.btn_sPrd.clicked.connect(lambda: self.startPred(plot_prd))
+            self.btn_ePrd.clicked.connect(lambda: self.endPred(plot_prd))
 
-    def endMNT(self, guiRelated_ALL, plot_detect):
-        SM, EM, SPR, EPR, btn_status, btn_loc, label_status, label_loc = guiRelated_ALL
-        SM.setEnabled(True)
-        EM.setEnabled(False)
-        label_status.setEnabled(False)
-        btn_status.setEnabled(False)
-        update_button(btn_status, 'grey', 'N/A')
-        plot_detect.detect = False
+            self.btn_sDet.setEnabled(True)
+            self.btn_eDet.setEnabled(False)
+            self.btn_sPrd.setEnabled(True)
+            self.btn_ePrd.setEnabled(False)
 
-    def startPRED(self, guiRelated_ALL, plot_detect):
-        SM, EM, SPR, EPR, btn_status, btn_loc, label_status, label_loc = guiRelated_ALL
-        SPR.setEnabled(False)
-        EPR.setEnabled(True)
-        label_loc.setEnabled(True)
-        btn_loc.setEnabled(True)
-        update_button(btn_loc, 'green', 'normal')
-        plot_detect.predict = True
+    def startDet(self, plot):
+        self.btn_sDet.setEnabled(False)
+        self.btn_eDet.setEnabled(True)
 
-    def endPRED(self, guiRelated_ALL, plot_detect):
-        SM, EM, SPR, EPR, btn_status, btn_loc, label_status, label_loc = guiRelated_ALL
-        SPR.setEnabled(True)
-        EPR.setEnabled(False)
-        label_loc.setEnabled(False)
-        btn_loc.setEnabled(False)
-        update_button(btn_loc, 'grey', 'N/A')
-        plot_detect.predict = False
+        plot.btn_displayDetSta = self.btn_displayDetSta
+        plot.btn_displayDetLoc = self.btn_displayDetLoc
+        plot.btn_displayDetTip = self.btn_displayDetTip
 
-    def define_plot_widgets(self):
-        # Defining all plot widgets
-        self.canvas_HY = MplCanvas(self, width=5, height=4, dpi=100)
-        self.ui.gridLayout_10.addWidget(self.canvas_HY, 1, 1, 1, 2)
-        self.canvas_HY_2 = MplCanvas(self, width=5, height=4, dpi=100)
-        self.ui.gridLayout_12.addWidget(self.canvas_HY_2, 1, 1, 1, 2)
+        update_button(plot.btn_displayDetSta, 'green', 'normal')
+        update_button(plot.btn_displayDetLoc, 'green', 'normal')
+        update_button(plot.btn_displayDetTip, 'green', 'normal')
 
-        self.canvas_VB = MplCanvas(self, width=5, height=4, dpi=100)
-        self.ui.gridLayout_14.addWidget(self.canvas_VB, 1, 1, 1, 2)
-        self.canvas_VB_2 = MplCanvas(self, width=5, height=4, dpi=100)
-        self.ui.gridLayout_16.addWidget(self.canvas_VB_2, 1, 1, 1, 2)
+        plot.detect = True
 
-        self.canvas_AE = MplCanvas(self, width=5, height=4, dpi=100)
-        self.ui.gridLayout_18.addWidget(self.canvas_AE, 1, 1, 1, 2)
-        self.canvas_AE_2 = MplCanvas(self, width=5, height=4, dpi=100)
-        self.ui.gridLayout_20.addWidget(self.canvas_AE_2, 1, 1, 1, 2)
+    def endDet(self, plot):
+        self.btn_sDet.setEnabled(True)
+        self.btn_eDet.setEnabled(False)
 
-    def define_all_guiRelated(self):
-        self.guiRelated_ALL = [
-            self.pushButton_startMonitoring,
-            self.pushButton_endMonitoring,
-            self.pushButton_startPrediction,
-            self.pushButton_endPrediction,
-            self.pushButton_status,
-            self.pushButton_location,
-            self.label_status,
-            self.label_location,
-        ]
-        self.guiRelated_HY = [
-            self.lineEdit_ymin_HY_1,
-            self.lineEdit_ymax_HY_1,
-            self.pushButton_minmax_HY_1,
-            self.pushButton_startPlot_HY_1,
-            self.pushButton_endPlot_HY_1,
-            self.pushButton_startRec_HY_1,
-            self.pushButton_endRec_HY_1,
-            self.pushButton_save_HY_1,
-            self.lineEdit_ymin_HY_2,
-            self.lineEdit_ymax_HY_2,
-            self.pushButton_minmax_HY_2,
-            self.pushButton_startPlot_HY_2,
-            self.pushButton_endPlot_HY_2,
-            self.pushButton_startRec_HY_2,
-            self.pushButton_endRec_HY_2,
-            self.pushButton_save_HY_2,
-        ]
-        self.guiRelated_VB = [
-            self.lineEdit_ymin_VB_1,
-            self.lineEdit_ymax_VB_1,
-            self.pushButton_minmax_VB_1,
-            self.pushButton_startPlot_VB_1,
-            self.pushButton_endPlot_VB_1,
-            self.pushButton_startRec_VB_1,
-            self.pushButton_endRec_VB_1,
-            self.pushButton_save_VB_1,
-            self.lineEdit_ymin_VB_2,
-            self.lineEdit_ymax_VB_2,
-            self.pushButton_minmax_VB_2,
-            self.pushButton_startPlot_VB_2,
-            self.pushButton_endPlot_VB_2,
-            self.pushButton_startRec_VB_2,
-            self.pushButton_endRec_VB_2,
-            self.pushButton_save_VB_2,
-        ]
-        self.guiRelated_AE = [
-            self.lineEdit_ymin_AE_1,
-            self.lineEdit_ymax_AE_1,
-            self.pushButton_minmax_AE_1,
-            self.pushButton_startPlot_AE_1,
-            self.pushButton_endPlot_AE_1,
-            self.pushButton_startRec_AE_1,
-            self.pushButton_endRec_AE_1,
-            self.pushButton_save_AE_1,
-            self.lineEdit_ymin_AE_2,
-            self.lineEdit_ymax_AE_2,
-            self.pushButton_minmax_AE_2,
-            self.pushButton_startPlot_AE_2,
-            self.pushButton_endPlot_AE_2,
-            self.pushButton_startRec_AE_2,
-            self.pushButton_endRec_AE_2,
-            self.pushButton_save_AE_2,
-        ]
+        update_button(plot.btn_displayDetSta, 'grey', 'N/A')
+        update_button(plot.btn_displayDetLoc, 'grey', 'N/A')
+        update_button(plot.btn_displayDetTip, 'grey', 'N/A')
 
-    def restrain_buttons_forSetUp(self):
-        sensors_gui = [self.guiRelated_ALL, self.guiRelated_HY, self.guiRelated_VB, self.guiRelated_AE]
-        restrained_forSetUp = []
-        for sensor in sensors_gui:
-            restrained_forSetUp.extend(sensor)
-        for item in restrained_forSetUp:
-            item.setEnabled(False)
+        plot.detect = False
+
+    def startPred(self, plot):
+        self.btn_sPrd.setEnabled(False)
+        self.btn_ePrd.setEnabled(True)
+
+        plot.btn_displayPrdSta = self.btn_displayPrdSta
+        plot.btn_displayPrdLoc = self.btn_displayPrdLoc
+        plot.btn_displayPrdTip = self.btn_displayPrdTip
+
+        update_button(plot.btn_displayPrdSta, 'green', 'normal')
+        update_button(plot.btn_displayPrdLoc, 'green', 'normal')
+        update_button(plot.btn_displayPrdTip, 'green', 'normal')
+
+        plot.predict = True
+
+    def endPred(self, plot):
+        self.btn_sPrd.setEnabled(True)
+        self.btn_ePrd.setEnabled(False)
+
+        update_button(plot.btn_displayPrdSta, 'grey', 'N/A')
+        update_button(plot.btn_displayPrdLoc, 'grey', 'N/A')
+        update_button(plot.btn_displayPrdTip, 'grey', 'N/A')
+
+        plot.predict = False
 
     ####################################General functions below#####################################
     def connectToGUI(self, sensor, plot, guiRelated):
         plot.timer.timeout.connect(lambda: update_plot(sensor, plot))
 
-        LE_ymin, LE_ymax, MM, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
+        LE_ymin, LE_ymax, MM, AUTO, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, AUTO_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
 
         MM.clicked.connect(lambda: self.minmax(
             plot,
             float(LE_ymin.text()),
             float(LE_ymax.text()),
         ))
+        AUTO.clicked.connect(lambda: self.autoscale(plot))
         SP.clicked.connect(lambda: self.startPlot(plot, guiRelated))
         EP.clicked.connect(lambda: self.endPlot(plot, guiRelated))
         SR.clicked.connect(lambda: self.startRec(plot, guiRelated))
@@ -262,6 +277,7 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
         SV.clicked.connect(lambda: self.save(plot))
 
         MM.setEnabled(False)
+        AUTO.setEnabled(False)
         SP.setEnabled(True)
         EP.setEnabled(False)
         SR.setEnabled(True)
@@ -269,23 +285,28 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
         SV.setEnabled(False)
 
     def minmax(self, plot, ymin, ymax):
+        # plot.auto = False
+        # plot.auto_2 = False
         plot.ymin = ymin
         plot.ymax = ymax
+
+    def autoscale(self, plot):
+        # plot.auto = True
+        # plot.ymin = None
+        # plot.ymax = None
+        plot.canvas.axes.relim()
+        plot.canvas.axes.autoscale_view()
 
     def startPlot(self, plot, guiRelated):
         plot.recording = False
 
         plot.timer.start(plot.updateInterval)  # Update plot every num(interval) milliseconds
 
-        # self.pushButton_status.setStyleSheet(
-        #     'background-color: rgb(156, 156, 156);'
-        #     'color: rgb(255, 255, 255);font: 63 15pt "Segoe UI Semibold";background-color: rgb(255, 255, 0);')
-
-
-        LE_ymin, LE_ymax, MM, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
+        LE_ymin, LE_ymax, MM, AUTO, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, AUTO_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
         LE_ymin.setEnabled(True)
         LE_ymax.setEnabled(True)
         MM.setEnabled(True)
+        AUTO.setEnabled(True)
         SP.setEnabled(False)
         EP.setEnabled(True)
         SR.setEnabled(False)
@@ -294,6 +315,7 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
         LE_ymin_2.setEnabled(True)
         LE_ymax_2.setEnabled(True)
         MM_2.setEnabled(True)
+        AUTO_2.setEnabled(True)
         SP_2.setEnabled(False)
         EP_2.setEnabled(True)
         SR_2.setEnabled(False)
@@ -303,10 +325,11 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
     def endPlot(self, plot, guiRelated):
         plot.timer.stop()
 
-        LE_ymin, LE_ymax, MM, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
+        LE_ymin, LE_ymax, MM, AUTO, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, AUTO_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
         LE_ymin.setEnabled(True)
         LE_ymax.setEnabled(True)
         MM.setEnabled(True)
+        AUTO.setEnabled(True)
         SP.setEnabled(True)
         EP.setEnabled(False)
         SR.setEnabled(True)
@@ -315,6 +338,7 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
         LE_ymin_2.setEnabled(True)
         LE_ymax_2.setEnabled(True)
         MM_2.setEnabled(True)
+        AUTO_2.setEnabled(True)
         SP_2.setEnabled(True)
         EP_2.setEnabled(False)
         SR_2.setEnabled(True)
@@ -327,10 +351,11 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
 
         plot.timer.start(plot.updateInterval)
 
-        LE_ymin, LE_ymax, MM, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
+        LE_ymin, LE_ymax, MM, AUTO, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, AUTO_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
         LE_ymin.setEnabled(True)
         LE_ymax.setEnabled(True)
         MM.setEnabled(True)
+        AUTO.setEnabled(True)
         SP.setEnabled(False)
         EP.setEnabled(False)
         SR.setEnabled(False)
@@ -339,6 +364,7 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
         LE_ymin_2.setEnabled(True)
         LE_ymax_2.setEnabled(True)
         MM_2.setEnabled(True)
+        AUTO_2.setEnabled(True)
         SP_2.setEnabled(False)
         EP_2.setEnabled(False)
         SR_2.setEnabled(False)
@@ -348,10 +374,11 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
     def endRec(self, plot, guiRelated):
         plot.timer.stop()
 
-        LE_ymin, LE_ymax, MM, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
+        LE_ymin, LE_ymax, MM, AUTO, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, AUTO_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
         LE_ymin.setEnabled(True)
         LE_ymax.setEnabled(True)
         MM.setEnabled(True)
+        AUTO.setEnabled(True)
         SP.setEnabled(True)
         EP.setEnabled(False)
         SR.setEnabled(True)
@@ -360,6 +387,7 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
         LE_ymin_2.setEnabled(True)
         LE_ymax_2.setEnabled(True)
         MM_2.setEnabled(True)
+        AUTO_2.setEnabled(True)
         SP_2.setEnabled(True)
         EP_2.setEnabled(False)
         SR_2.setEnabled(True)

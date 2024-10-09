@@ -79,13 +79,19 @@ class NI():
     def DAQ(self):
         # while True:
         with nidaqmx.Task() as task:
-            task.ai_channels.add_ai_voltage_chan(f"{self.device}/{self.channel}")
+
+
+            channel=task.ai_channels.add_ai_voltage_chan(f"{self.device}/{self.channel}")
+            # if self.name=="HY":
+            #     channel.ai_min = -2.0
+            #     channel.ai_max = 2.0
             task.timing.cfg_samp_clk_timing(self.fs,
                                             sample_mode=AcquisitionType.CONTINUOUS,
                                             samps_per_chan=self.chunk)
-            data = task.read(number_of_samples_per_channel=self.chunk)
+            data = task.read(number_of_samples_per_channel=self.chunk)  # list
+            data = np.array(data)*10
             self.q.put(data)
-            print("NI DAQ qsize:", self.q.qsize())
+            # print("NI DAQ qsize:", self.q.qsize())
                 # print(self.q.get())
                 # print(self.q.get())
 
@@ -102,7 +108,7 @@ class audio():
         self.q = multiprocessing.Queue()
 
         self.p = pyaudio.PyAudio()
-        print("audio device:", device)
+        # print("audio device:", device)
         self.inStream = self.p.open(format=pyaudio.paInt16,
                                     channels=1,
                                     rate=self.fs,
@@ -128,27 +134,37 @@ class audio():
         data = np.fromstring(audioString, dtype=np.int16)/1000
         data = data.tolist()
         self.q.put(data)
-        print("audio DAQ qsize:", self.q.qsize())
+        # print("audio DAQ qsize:", self.q.qsize())
 
 
 class plotting():
     def __init__(
             self, sensor, canvas, canvas_2, updateInterval,
-            linewidth=.2, ymin=-10, ymax=10, tick=5, ):
+            btn_displayDetSta, btn_displayDetLoc, btn_displayDetTip,
+            btn_displayPrdSta, btn_displayPrdLoc, btn_displayPrdTip,
+            linewidth=.2, color='white',
+            ymin=None, ymax=None, tick=.5,
+            plot_excluded = None,
+    ):
         self.sensor = sensor
         self.q = sensor.q
+        # self.new_data = None
 
-        self.detect = None
-        self.btn_displayDetSta = None
-        self.btn_displayDetLoc = None
-        self.btn_displayDetTip = None
+        self.plot_excluded = plot_excluded
+
+        self.detect = False
+        self.btn_displayDetSta = btn_displayDetSta
+        self.btn_displayDetLoc = btn_displayDetLoc
+        self.btn_displayDetTip = btn_displayDetTip
         self.detected = False
+        self.startTime_det = float('inf')
 
-        self.predict = None
-        self.btn_displayPrdSta = None
-        self.btn_displayPrdLoc = None
-        self.btn_displayPrdTip = None
+        self.predict = False
+        self.btn_displayPrdSta = btn_displayPrdSta
+        self.btn_displayPrdLoc = btn_displayPrdLoc
+        self.btn_displayPrdTip = btn_displayPrdTip
         self.predicted = False
+        self.startTime_prd = float('inf')
 
         # self.loc = round(np.random.rand() * 10, 1)
         self.detLoc = 1.2
@@ -162,6 +178,14 @@ class plotting():
 
         self.linewidth = linewidth
 
+        self.color=color
+        if self.color=='white':
+            self.color=(1,1,1)
+        if self.color=='yellow':
+            self.color=(1, 0.984, 0)
+        if self.color=='light green':
+            self.color=(0, 1, 0.29)
+
         self.ref_plot = None
 
         self.timer = QtCore.QTimer()
@@ -173,6 +197,7 @@ class plotting():
         self.auto = False
         self.ymin = ymin
         self.ymax = ymax
+        # self.tick = (ymax-ymin)/10
         self.tick = tick
 
         self.second_plot = True
@@ -189,75 +214,81 @@ class plotting():
 
     def start(self):
         block = True  # Works for vibra if True
-        try:
-            new_data = self.q.get(block=block)
-            print(len(new_data))
-            # print("shape:|", np.array(new_data).shape)
+        # try:
+        new_data = self.q.get(block=block)
+        # print(len(new_data))
+        # print("shape:|", np.array(new_data).shape)
 
-            if self.detect:
-                if (any(ele > 0 for ele in new_data)) and (self.predicted is False):
-                    gui_display.update_button(self.btn_displayDetSta, 'red', 'LEAK DETECTED!')
-                    gui_display.update_button(self.btn_displayDetLoc, 'red', str(self.detLoc)+'m from sensor 1')
-                    gui_display.update_button(self.btn_displayDetTip, 'red', 'repair valve')
-                    self.detected = True
-                else:
+        if self.detect and (self.plot_excluded.predicted==False):
+            if any(ele > -3.4 for ele in new_data):
+                self.detected = True
+                self.startTime_det = time.time()
+                gui_display.update_button(self.btn_displayDetSta, 'red', '누수 감지!', 'white')
+                gui_display.update_button(self.btn_displayDetLoc, 'red', '하이드로폰 #1 우측' + str(self.detLoc)+'m', 'white')
+                gui_display.update_button(self.btn_displayDetTip, 'red', '벨브 #1 점검 및 교체 요청!', 'white')
+            else:
+                elapsedTime = time.time() - self.startTime_det
+                if elapsedTime > 4:
+                    self.detected = False
                     gui_display.update_button(self.btn_displayDetSta, 'green', 'normal')
                     gui_display.update_button(self.btn_displayDetLoc, 'green', 'normal')
                     gui_display.update_button(self.btn_displayDetTip, 'green', 'normal')
-                    self.detected = False
 
-            if self.predict:
-                if (any(ele > 0 for ele in new_data)) and (self.detected is False):
-                    gui_display.update_button(self.btn_displayPrdSta, 'orange', 'Leak Warning!')
-                    gui_display.update_button(self.btn_displayPrdLoc, 'orange', str(self.prdLoc) + 'm from sensor 1')
-                    gui_display.update_button(self.btn_displayPrdTip, 'orange', 'repair valve')
-                    self.predicted = True
-                else:
+        if self.predict and (self.plot_excluded.detected==False):
+            if (any(ele > 7 for ele in new_data)) and (self.detected is False):
+                self.startTime_prd = time.time()
+                self.predicted = True
+                gui_display.update_button(self.btn_displayPrdSta, 'orange', '누수 위험 감지!', 'white')
+                gui_display.update_button(self.btn_displayPrdLoc, 'orange', '진동센서 #2 좌측' + str(self.prdLoc)+'m', 'white')
+                gui_display.update_button(self.btn_displayPrdTip, 'orange', '벨브 #2 점검 요청!', 'white')
+            else:
+                elapsedTime = time.time() - self.startTime_prd
+                if elapsedTime > 4:
+                    self.predicted = False
                     gui_display.update_button(self.btn_displayPrdSta, 'green', 'normal')
                     gui_display.update_button(self.btn_displayPrdLoc, 'green', 'normal')
                     gui_display.update_button(self.btn_displayPrdTip, 'green', 'normal')
-                    self.predicted = False
 
             ###########################
-            shift = len(new_data)
-            if self.second_plot:
-                self.history_2 = self.history
-            self.history = np.roll(self.history, -shift, axis=0)
-            self.history[-shift:, ] = new_data
-            self.y = self.history[:]
-            self.canvas.axes.set_facecolor((0, 0, 0))
+        shift = len(new_data)
+        if self.second_plot:
+            self.history_2 = self.history
+        self.history = np.roll(self.history, -shift, axis=0)
+        self.history[-shift:, ] = new_data
+        self.y = self.history[:]
+        self.canvas.axes.set_facecolor((0, 0, 0))
 
-            if self.recording:
-                self.recorded.extend(new_data)
+        if self.recording:
+            self.recorded.extend(new_data)
 
-            if self.ref_plot is None:
-                plot_refs = self.canvas.axes.plot(self.y, color=(1, 1, 1), linewidth=self.linewidth)
-                self.ref_plot = plot_refs[0]
+        if self.ref_plot is None:
+            plot_refs = self.canvas.axes.plot(self.y, color=self.color, linewidth=self.linewidth)
+            self.ref_plot = plot_refs[0]
+        else:
+            self.ref_plot.set_ydata(self.y)
+
+        if self.second_plot:
+            self.y_2 = self.history_2[:]
+            self.canvas_2.axes.set_facecolor((0, 0, 0))
+            if self.ref_plot_2 is None:
+                plot_refs_2 = self.canvas_2.axes.plot(self.y_2, color=self.color, linewidth=self.linewidth)
+                self.ref_plot_2 = plot_refs_2[0]
             else:
-                self.ref_plot.set_ydata(self.y)
-
-            if self.second_plot:
-                self.y_2 = self.history_2[:]
-                self.canvas_2.axes.set_facecolor((0, 0, 0))
-                if self.ref_plot_2 is None:
-                    plot_refs_2 = self.canvas_2.axes.plot(self.y_2, color=(1, 1, 1), linewidth=self.linewidth)
-                    self.ref_plot_2 = plot_refs_2[0]
-                else:
-                    self.ref_plot_2.set_ydata(self.y_2)
+                self.ref_plot_2.set_ydata(self.y_2)
             ###########################################
-        except queue.Empty:
-            print("empty")
+        # except queue.Empty:
+        #     print("empty")
 
         # Time domain
         self.canvas.axes.yaxis.grid(True, linestyle='--')
         start, end = self.canvas.axes.get_ylim()
         self.canvas.axes.yaxis.set_ticks(np.arange(start, end, self.tick))
         self.canvas.axes.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1f'))
-        if (self.ymin is None) and (self.ymax is None):
-            self.canvas.axes.relim()
-            self.canvas.axes.autoscale_view()
-        else:
-            self.canvas.axes.set_ylim(ymin=self.ymin, ymax=self.ymax)
+        # if self.ymin and self.ymax:
+        self.canvas.axes.set_ylim(ymin=self.ymin, ymax=self.ymax)
+        # else:
+        #     self.canvas.axes.relim()
+        #     self.canvas.axes.autoscale_view()
         self.canvas.draw()
 
         if self.second_plot:
@@ -265,11 +296,11 @@ class plotting():
             start, end = self.canvas_2.axes.get_ylim()
             self.canvas_2.axes.yaxis.set_ticks(np.arange(start, end, self.tick))
             self.canvas_2.axes.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1f'))
-            if self.auto_2:
-                self.canvas_2.axes.relim()
-                self.canvas_2.axes.autoscale_view()
-            else:
-                self.canvas_2.axes.set_ylim(ymin=self.ymin, ymax=self.ymax)
+            # if self.ymin and self.ymax:
+            self.canvas_2.axes.set_ylim(ymin=self.ymin, ymax=self.ymax)
+            # else:
+            #     self.canvas_2.axes.relim()
+            #     self.canvas_2.axes.autoscale_view()
             self.canvas_2.draw()
 
         # Freq domain

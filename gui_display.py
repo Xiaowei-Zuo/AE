@@ -57,7 +57,7 @@ def update_plot(sensor, plot):
     plot.start_thread()
 
 
-def update_button(btn, bgcolor, text, color='black'):
+def update_button(btn, bgcolor, text, color='black', bold=True):
     if bgcolor == 'red':
         bgcolor = '(255, 0, 0)'
     if bgcolor == 'orange':
@@ -66,17 +66,26 @@ def update_button(btn, bgcolor, text, color='black'):
         bgcolor = '(255, 255, 0)'
     if bgcolor == 'green':
         bgcolor = '(0, 255, 0)'
+    if bgcolor == 'blue':
+        bgcolor = '(33, 111, 255)'
     if bgcolor == 'grey':
         bgcolor = '(156, 156, 156)'
+    if bgcolor == 'dark grey':
+        bgcolor = '(72, 72, 72)'
+    if bgcolor == 'black':
+        bgcolor = '(0, 0, 0)'
     str_bgcolor = 'background-color: rgb' + bgcolor + ';'
 
     if color == 'black':
-        color = '(0,0,0)'
+        color = '(0, 0, 0)'
     if color == 'white':
-        color = '(255,255,255)'
+        color = '(255, 255, 255)'
     str_color = 'color: rgb' +color + ';'
 
     string = str_bgcolor + 'font: 63 15pt "Segoe UI Semibold";' + str_color
+
+    if bold:
+        string += 'font - weight: bold;'
 
     btn.setStyleSheet(string)
     btn.setText(text)
@@ -248,9 +257,9 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
         plot.btn_displayDetLoc = self.btn_displayDetLoc
         plot.btn_displayDetTip = self.btn_displayDetTip
 
-        update_button(plot.btn_displayDetSta, 'green', 'normal')
-        update_button(plot.btn_displayDetLoc, 'green', 'normal')
-        update_button(plot.btn_displayDetTip, 'green', 'normal')
+        update_button(plot.btn_displayDetSta, 'dark grey', '정상', 'white')
+        update_button(plot.btn_displayDetLoc, 'dark grey', '정상', 'white')
+        update_button(plot.btn_displayDetTip, 'dark grey', '정상', 'white')
 
         plot.detect = True
 

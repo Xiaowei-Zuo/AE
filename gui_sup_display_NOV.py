@@ -39,7 +39,7 @@ import csv
 
 import pyaudio
 import wave
-import gui_display
+import gui_display_NOV
 
 import mytime
 
@@ -239,31 +239,31 @@ class plotting_ver2():
             if any(ele > -3.4 for ele in self.new_data):
                 self.detected = True
                 self.startTime_det = time.time()
-                gui_display.update_button(self.btn_displayDetSta, 'red', '누수 감지!', 'white')
-                gui_display.update_button(self.btn_displayDetLoc, 'dark grey', '하이드로폰#1 우측 ' + str(self.detLoc)+'m', 'white')
-                gui_display.update_button(self.btn_displayDetTip, 'dark grey', '벨브#1 점검 및 교체 요청!', 'white')
+                gui_display_NOV.update_button(self.btn_displayDetSta, 'red', '누수 감지!', 'white')
+                gui_display_NOV.update_button(self.btn_displayDetLoc, 'dark grey', '하이드로폰#1 우측 ' + str(self.detLoc)+'m', 'white')
+                gui_display_NOV.update_button(self.btn_displayDetTip, 'dark grey', '벨브#1 점검 및 교체 요청!', 'white')
             else:
                 elapsedTime = time.time() - self.startTime_det
                 if elapsedTime > 4:
                     self.detected = False
-                    gui_display.update_button(self.btn_displayDetSta, 'green', '정상')
-                    gui_display.update_button(self.btn_displayDetLoc, 'dark grey', '정상', 'white')
-                    gui_display.update_button(self.btn_displayDetTip, 'dark grey', '정상', 'white')
+                    gui_display_NOV.update_button(self.btn_displayDetSta, 'green', '정상')
+                    gui_display_NOV.update_button(self.btn_displayDetLoc, 'dark grey', '정상', 'white')
+                    gui_display_NOV.update_button(self.btn_displayDetTip, 'dark grey', '정상', 'white')
 
         if self.predict and (self.plot_excluded.detected==False):
             if (any(ele > 7 for ele in self.new_data)) and (self.detected is False):
                 self.startTime_prd = time.time()
                 self.predicted = True
-                gui_display.update_button(self.btn_displayPrdSta, 'blue', '누수 위험 감지!', 'white')
-                gui_display.update_button(self.btn_displayPrdLoc, 'dark grey', '진동센서#2 좌측 ' + str(self.prdLoc)+'m', 'white')
-                gui_display.update_button(self.btn_displayPrdTip, 'dark grey', '벨브#2 점검 요청!', 'white')
+                gui_display_NOV.update_button(self.btn_displayPrdSta, 'blue', '누수 위험 감지!', 'white')
+                gui_display_NOV.update_button(self.btn_displayPrdLoc, 'dark grey', '진동센서#2 좌측 ' + str(self.prdLoc)+'m', 'white')
+                gui_display_NOV.update_button(self.btn_displayPrdTip, 'dark grey', '벨브#2 점검 요청!', 'white')
             else:
                 elapsedTime = time.time() - self.startTime_prd
                 if elapsedTime > 4:
                     self.predicted = False
-                    gui_display.update_button(self.btn_displayPrdSta, 'green', '정상')
-                    gui_display.update_button(self.btn_displayPrdLoc, 'dark grey', '정상', 'white')
-                    gui_display.update_button(self.btn_displayPrdTip, 'dark grey', '정상', 'white')
+                    gui_display_NOV.update_button(self.btn_displayPrdSta, 'green', '정상')
+                    gui_display_NOV.update_button(self.btn_displayPrdLoc, 'dark grey', '정상', 'white')
+                    gui_display_NOV.update_button(self.btn_displayPrdTip, 'dark grey', '정상', 'white')
 
             ###########################
         shift = len(self.new_data)
@@ -407,31 +407,31 @@ class plotting():
             if any(ele > -3.35 for ele in new_data):
                 self.detected = True
                 self.startTime_det = time.time()
-                gui_display.update_button(self.btn_displayDetSta, 'red', '누수 감지!', 'white', fontsize='20pt')
-                gui_display.update_button(self.btn_displayDetLoc, 'dark grey', '하이드로폰 #1 우측' + str(self.detLoc)+'m', 'white')
-                gui_display.update_button(self.btn_displayDetTip, 'dark grey', '벨브 #1 점검 및 교체 요청!', 'white')
+                gui_display_NOV.update_button(self.btn_displayDetSta, 'red', '누수 감지!', 'white', fontsize='20pt')
+                gui_display_NOV.update_button(self.btn_displayDetLoc, 'dark grey', '하이드로폰 #1 우측' + str(self.detLoc)+'m', 'white')
+                gui_display_NOV.update_button(self.btn_displayDetTip, 'dark grey', '벨브 #1 점검 및 교체 요청!', 'white')
             else:
                 elapsedTime = time.time() - self.startTime_det
                 if elapsedTime > 4:
                     self.detected = False
-                    gui_display.update_button(self.btn_displayDetSta, 'green', '정상', 'white', fontsize='20pt')
-                    gui_display.update_button(self.btn_displayDetLoc, 'green', '정상', 'white')
-                    gui_display.update_button(self.btn_displayDetTip, 'green', '정상', 'white')
+                    gui_display_NOV.update_button(self.btn_displayDetSta, 'green', '정상', 'white', fontsize='20pt')
+                    gui_display_NOV.update_button(self.btn_displayDetLoc, 'green', '정상', 'white')
+                    gui_display_NOV.update_button(self.btn_displayDetTip, 'green', '정상', 'white')
 
         if self.predict and (self.plot_excluded.detected==False):
             if (any(ele > 7 for ele in new_data)) and (self.detected is False):
                 self.startTime_prd = time.time()
                 self.predicted = True
-                gui_display.update_button(self.btn_displayPrdSta, 'blue', '누수 위험 감지!', 'white', fontsize='20pt')
-                gui_display.update_button(self.btn_displayPrdLoc, 'dark grey', '진동센서 #2 좌측' + str(self.prdLoc)+'m', 'white')
-                gui_display.update_button(self.btn_displayPrdTip, 'dark grey', '벨브 #2 점검 요청!', 'white')
+                gui_display_NOV.update_button(self.btn_displayPrdSta, 'blue', '누수 위험 감지!', 'white', fontsize='20pt')
+                gui_display_NOV.update_button(self.btn_displayPrdLoc, 'dark grey', '진동센서 #2 좌측' + str(self.prdLoc)+'m', 'white')
+                gui_display_NOV.update_button(self.btn_displayPrdTip, 'dark grey', '벨브 #2 점검 요청!', 'white')
             else:
                 elapsedTime = time.time() - self.startTime_prd
                 if elapsedTime > 4:
                     self.predicted = False
-                    gui_display.update_button(self.btn_displayPrdSta, 'green', '정상', 'white', fontsize='20pt')
-                    gui_display.update_button(self.btn_displayPrdLoc, 'green', '정상', 'white')
-                    gui_display.update_button(self.btn_displayPrdTip, 'green', '정상', 'white')
+                    gui_display_NOV.update_button(self.btn_displayPrdSta, 'green', '정상', 'white', fontsize='20pt')
+                    gui_display_NOV.update_button(self.btn_displayPrdLoc, 'green', '정상', 'white')
+                    gui_display_NOV.update_button(self.btn_displayPrdTip, 'green', '정상', 'white')
 
             ###########################
         shift = len(new_data)

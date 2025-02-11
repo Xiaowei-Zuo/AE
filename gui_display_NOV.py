@@ -23,7 +23,7 @@ import csv
 import pyaudio
 import wave
 import mytime
-import gui_support_display
+import gui_sup_display_NOV
 from tkinter import Tk, filedialog
 # import PIL.Image
 from PIL import Image
@@ -106,7 +106,7 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
 
         # self.p_DAQ_VB.start()
 
-        self.HY = True
+        self.HY = False
         self.VB = True
         self.AE = True
         # self.HY1 = True
@@ -125,13 +125,13 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
 
             self.get_all_audio_devices()
             audio_device = int(input("Enter your audio selection (index):"))
-            self.HY = gui_support_display.audio(
+            self.HY = gui_sup_display_NOV.audio(
                 name="HY", device=audio_device,
                 chunk=2048, displayL=10000, )
-            # self.HY = gui_support_display.NI(
+            # self.HY = gui_sup_display_NOV.NI(
             #     name="HY", device='myDAQ2', channel="audioInputLeft",
             #     fs=44100, chunk=256, displayL=2000, )
-            self.plot_HY = gui_support_display.plotting(
+            self.plot_HY = gui_sup_display_NOV.plotting(
                 self.HY, self.canvas_HY, self.canvas_HY_2, 17,
                 self.btn_displayDetSta, self.btn_displayDetLoc, self.btn_displayDetTip,
                 self.btn_displayPrdSta, self.btn_displayPrdLoc, self.btn_displayPrdTip,
@@ -166,12 +166,12 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
             self.canvas_VB_2 = MplCanvas(self, width=5, height=4, dpi=100)
             self.ui.gridLayout_16.addWidget(self.canvas_VB_2, 1, 1, 1, 2)
 
-            self.VB = gui_support_display.NI(
+            self.VB = gui_sup_display_NOV.NI(
                 name="VB", device='Dev2', channel="ai0",
                 fs=40000, chunk=128, displayL=1000,)
-            self.getData_VB = gui_support_display.getData(self.VB.q, 10)
-            # self.p_DAQ_VB = multiprocessing.Process(target=gui_support_display.myDAQ, args=(self.VB,))
-            self.plot_VB = gui_support_display.plotting(
+            self.getData_VB = gui_sup_display_NOV.getData(self.VB.q, 10)
+            # self.p_DAQ_VB = multiprocessing.Process(target=gui_sup_display_NOV.myDAQ, args=(self.VB,))
+            self.plot_VB = gui_sup_display_NOV.plotting(
                 self.VB, self.canvas_VB, self.canvas_VB_2, 10,
                 self.btn_displayDetSta, self.btn_displayDetLoc, self.btn_displayDetTip,
                 self.btn_displayPrdSta, self.btn_displayPrdLoc, self.btn_displayPrdTip,
@@ -207,10 +207,10 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
             self.canvas_AE_2 = MplCanvas(self, width=5, height=4, dpi=100)
             self.ui.gridLayout_20.addWidget(self.canvas_AE_2, 1, 1, 1, 2)
 
-            self.AE = gui_support_display.NI(
+            self.AE = gui_sup_display_NOV.NI(
                 name="AE", device='myDAQ1', channel="ai0",
                 fs=40000, chunk=256, displayL=1024,)
-            self.plot_AE = gui_support_display.plotting(
+            self.plot_AE = gui_sup_display_NOV.plotting(
                 self.AE, self.canvas_AE, self.canvas_AE_2, 7,
                 self.btn_displayDetSta, self.btn_displayDetLoc, self.btn_displayDetTip,
                 self.btn_displayPrdSta, self.btn_displayPrdLoc, self.btn_displayPrdTip,

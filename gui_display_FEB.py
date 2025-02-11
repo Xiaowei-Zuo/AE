@@ -47,6 +47,7 @@ class MplCanvas(FigureCanvas):
         fig.tight_layout()
 
 
+
 def get_data(q):
     return q.get(block=True)
 
@@ -56,6 +57,9 @@ def update_plot(sensor, plot):
     # plot.new_data = get_data(sensor.q) # q.get()
     plot.start_thread()
 
+
+def update_MLresults(ML):
+    ML.start_thread()
 
 def update_button(btn, bgcolor, text, color='black', bold=True, fontsize='15pt'):
     if bgcolor == 'red':
@@ -185,6 +189,8 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
                 self.pushButton_save_AE_1,]
             self.connectToGUI(self.AE, self.plot_AE, self.guiRelated_AE)
 
+
+
         if self.setUp:
             # plot_det = self.plot_VB
             # plot_det.plot_excluded = self.plot_AE
@@ -192,26 +198,51 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
             # plot_prd = self.plot_AE
             # plot_prd.plot_excluded = self.plot_VB
             #
-            self.btn_sDet.clicked.connect(lambda: self.startDet())
-            self.btn_eDet.clicked.connect(lambda: self.endDet())
+            self.ML = gui_sup_display_FEB.ML(self.btn_displayDetSta, plot_HY=self.plot_HY, plot_VB=self.plot_VB)
+
+            self.btn_sDet.clicked.connect(lambda: self.startDet(self.ML))
+            self.btn_eDet.clicked.connect(lambda: self.endDet(self.ML))
 
             self.btn_sDet.setEnabled(True)
             self.btn_eDet.setEnabled(False)
 
-    def startDet(self):
+            print("finished setup")
+
+            self.ML.timer.timeout.connect(lambda: update_MLresults(self.ML))
+
+
+    def startDet(self, ML):
         self.btn_sDet.setEnabled(False)
         self.btn_eDet.setEnabled(True)
 
         update_button(self.btn_displayDetSta, 'green', '정상', 'white', fontsize='20pt')
         update_button(self.btn_displayDetLoc, 'green', '정상', 'white')
 
-    def endDet(self):
+        ML.timer.start(ML.updateInterval)
+
+        print("started detection")
+
+    def endDet(self, ML):
         self.btn_sDet.setEnabled(True)
         self.btn_eDet.setEnabled(False)
+
+        ML.timer.stop()
 
         update_button(self.btn_displayDetSta, 'grey', 'N/A')
         update_button(self.btn_displayDetLoc, 'grey', 'N/A')
 
+
+    # def classify_status(self, plot_HY=None, plot_VB=None, plot_AE=None):
+    #     if self.HY:
+    #         print("HY shape:", np.array(plot_HY.new_data).shape)
+    #     if self.VB:
+    #         print("VB shape:", np.array(plot_VB.new_data).shape)
+    #     if self.AE:
+    #         print("AE shape:", np.array(plot_AE.new_data).shape)
+    #
+    #     print(np.mean(plot_VB.new_data))
+    #     if np.mean(plot_VB.new_data) > -0.3:
+    #         update_button(self.btn_displayDetSta, 'red', '정상', 'white')
 
     ####################################General functions below#####################################
     def get_all_audio_devices(self):

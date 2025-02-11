@@ -226,6 +226,7 @@ class plotting():
         # print(len(new_data))
         print("shape:", np.array(self.new_data).shape)
 
+
             ###########################
         shift = len(self.new_data)
         self.history = np.roll(self.history, -shift, axis=0)
@@ -261,21 +262,28 @@ class plotting():
 
 class ML():
     def __init__(
-            self, AE, HY, VI,
-            AE_data=None, HY_data=None, VI_data=None,
+            self,
+            btn_displayDetSta,
+            plot_HY=None, plot_VB=None, plot_AE=None,
+            updateInterval=19,
     ):
-        self.AE = AE
-        self.HY = HY
-        self.VI = VI
-        self.AE_data = AE_data
-        self.HY_data = HY_data
-        self.VI_data = VI_data
+        self.btn_displayDetSta = btn_displayDetSta
+        self.plot_HY = plot_HY
+        self.plot_VB = plot_VB
+        self.plot_AE = plot_AE
 
-    def classify_status(self):
-        self.leakStatus = None
-        gui_display_FEB.update_button(self.btn_displayDetSta, 'red', '누수 감지!', 'white', fontsize='20pt')
-        gui_display_FEB.update_button(self.btn_displayDetLoc, 'dark grey', '하이드로폰 #1 우측' + str(self.detLoc) + 'm',
-                                      'white')
+        self.timer = QtCore.QTimer()
+        self.updateInterval = updateInterval
 
-    def classify_loc(self):
-        self.leakLocation = None
+    def start_thread(self):
+        self.thread = Thread(target=self.start)
+        self.thread.start()
+        self.thread.join()
+
+    def start(self):
+        print("in ML function")
+        print(np.mean(self.plot_VB.new_data))
+        if np.mean(self.plot_VB.new_data) > -0.3:
+            gui_display_FEB.update_button(self.btn_displayDetSta, 'red', '정상', 'white')
+        else:
+            gui_display_FEB.update_button(self.btn_displayDetSta, 'green', '정상', 'white')

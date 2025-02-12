@@ -34,8 +34,9 @@ import cv2
 import matplotlib.pyplot as plt
 from pathlib import Path
 import multiprocessing
+import time
 
-input_audio_deviceInfos = QAudioDeviceInfo.availableDevices(QAudio.AudioInput)
+# input_audio_deviceInfos = QAudioDeviceInfo.availableDevices(QAudio.AudioInput)
 # print(input_audio_deviceInfos)
 
 
@@ -47,15 +48,27 @@ class MplCanvas(FigureCanvas):
         fig.tight_layout()
 
 
-
 def get_data(q):
     return q.get(block=True)
-
+#
+# def update_data(QDG):
+#     QDG.start_thread()
 
 def update_plot(sensor, plot):
-    sensor.DAQ()  # q.put()
+    start_time = time.time()
+
+    sensor.start_thread()  # q.put()
     # plot.new_data = get_data(sensor.q) # q.get()
     plot.start_thread()
+    sensor.end_thread()
+    plot.end_thread()
+
+    end_time = time.time()
+    print("time elapsed:", end_time - start_time)
+#
+# def stop_update_plot(sensor, plot):
+#     sensor.end_thread()
+#     plot.end_thread()
 
 
 def update_MLresults(ML):
@@ -119,7 +132,7 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
 
             self.HY = gui_sup_display_FEB.NI(
                 name="HY", device='myDAQ1', channel="audioInputLeft",
-                fs=100*1000, chunk=65536, displayL=65536,
+                fs=100*1000, chunk=2048, displayL=65536,
                 input_min=-2.0, input_max=2.0)
             self.plot_HY = gui_sup_display_FEB.plotting(
                 self.HY, self.canvas_HY, 17,
@@ -137,14 +150,19 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
                 self.pushButton_save_HY_1,]
             self.connectToGUI(self.HY, self.plot_HY, self.guiRelated_HY)
 
+            self.plot_HY.timer.timeout.connect(lambda: update_plot(self.HY, self.plot_HY))
+
+            self.QDG_HY = gui_sup_display_FEB.QDG(self.HY, updateInterval=17)
+            # self.QDG_HY.timer.timeout.connect(lambda: update_data(self.QDG_HY))
+
         if self.VB:
             self.canvas_VB = MplCanvas(self, width=5, height=4, dpi=100)
             self.ui.gridLayout_14.addWidget(self.canvas_VB, 1, 1, 1, 2)
 
             self.VB = gui_sup_display_FEB.NI(
                 name="VB", device='Dev2', channel="ai0",
-                fs=24000, chunk=15728, displayL=15728,)
-            self.getData_VB = gui_sup_display_FEB.getData(self.VB.q, 10)
+                fs=24*1000, chunk=2048, displayL=15728,)
+            # self.getData_VB = gui_sup_display_FEB.getData(self.VB.q, 10)
             # self.p_DAQ_VB = multiprocessing.Process(target=gui_sup_display_FEB.myDAQ, args=(self.VB,))
             self.plot_VB = gui_sup_display_FEB.plotting(
                 self.VB, self.canvas_VB,10,
@@ -162,6 +180,8 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
                 self.pushButton_endRec_VB_1,
                 self.pushButton_save_VB_1,]
             self.connectToGUI(self.VB, self.plot_VB, self.guiRelated_VB)
+
+            self.plot_VB.timer.timeout.connect(lambda: update_plot(self.VB, self.plot_VB))
 
         if self.AE:
             self.canvas_AE = MplCanvas(self, width=5, height=4, dpi=100)
@@ -189,19 +209,11 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
                 self.pushButton_save_AE_1,]
             self.connectToGUI(self.AE, self.plot_AE, self.guiRelated_AE)
 
-
-
         if self.setUp:
-            # plot_det = self.plot_VB
-            # plot_det.plot_excluded = self.plot_AE
-            #
-            # plot_prd = self.plot_AE
-            # plot_prd.plot_excluded = self.plot_VB
-            #
-            self.ML = gui_sup_display_FEB.ML(self.btn_displayDetSta, plot_HY=self.plot_HY, plot_VB=self.plot_VB)
+            self.ML = gui_sup_display_FEB.ML(self.btn_displayDetSta, plot_HY=self.plot_HY)
 
-            self.btn_sDet.clicked.connect(lambda: self.startDet(self.ML))
-            self.btn_eDet.clicked.connect(lambda: self.endDet(self.ML))
+            self.btn_sDet.clicked.connect(lambda: self.startDet(self.QDG_HY, self.ML))
+            self.btn_eDet.clicked.connect(lambda: self.endDet(self.QDG_HY, self.ML))
 
             self.btn_sDet.setEnabled(True)
             self.btn_eDet.setEnabled(False)
@@ -209,40 +221,34 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
             print("finished setup")
 
             self.ML.timer.timeout.connect(lambda: update_MLresults(self.ML))
+            #
+            # self.plot_HY.timer.start(self.plot_HY.updateInterval)
+            # self.plot_VB.timer.start(self.plot_VB.updateInterval)
 
 
-    def startDet(self, ML):
+
+    def startDet(self, QDG_HY, ML):
         self.btn_sDet.setEnabled(False)
         self.btn_eDet.setEnabled(True)
 
         update_button(self.btn_displayDetSta, 'green', '정상', 'white', fontsize='20pt')
         update_button(self.btn_displayDetLoc, 'green', '정상', 'white')
 
+        # QDG_HY.timer.start(QDG_HY.updateInterval)
         ML.timer.start(ML.updateInterval)
+
 
         print("started detection")
 
-    def endDet(self, ML):
+    def endDet(self, QDG_HY, ML):
         self.btn_sDet.setEnabled(True)
         self.btn_eDet.setEnabled(False)
 
         ML.timer.stop()
+        QDG_HY.timer.stop()
 
         update_button(self.btn_displayDetSta, 'grey', 'N/A')
         update_button(self.btn_displayDetLoc, 'grey', 'N/A')
-
-
-    # def classify_status(self, plot_HY=None, plot_VB=None, plot_AE=None):
-    #     if self.HY:
-    #         print("HY shape:", np.array(plot_HY.new_data).shape)
-    #     if self.VB:
-    #         print("VB shape:", np.array(plot_VB.new_data).shape)
-    #     if self.AE:
-    #         print("AE shape:", np.array(plot_AE.new_data).shape)
-    #
-    #     print(np.mean(plot_VB.new_data))
-    #     if np.mean(plot_VB.new_data) > -0.3:
-    #         update_button(self.btn_displayDetSta, 'red', '정상', 'white')
 
     ####################################General functions below#####################################
     def get_all_audio_devices(self):
@@ -271,16 +277,16 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
         # AUTO.clicked.connect(lambda: self.autoscale(plot))
         SP.clicked.connect(lambda: self.startPlot(plot, guiRelated))
         EP.clicked.connect(lambda: self.endPlot(plot, guiRelated))
-        SR.clicked.connect(lambda: self.startRec(plot, guiRelated))
-        ER.clicked.connect(lambda: self.endRec(plot, guiRelated))
+        # SR.clicked.connect(lambda: self.startRec(plot, guiRelated))
+        # ER.clicked.connect(lambda: self.endRec(plot, guiRelated))
         SV.clicked.connect(lambda: self.save(plot))
 
         MM.setEnabled(False)
         # AUTO.setEnabled(False)
         SP.setEnabled(True)
         EP.setEnabled(False)
-        SR.setEnabled(True)
-        ER.setEnabled(False)
+        # SR.setEnabled(True)
+        # ER.setEnabled(False)
         SV.setEnabled(False)
 
     def minmax(self, plot, ymin, ymax):
@@ -301,9 +307,8 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
     def startPlot(self, plot, guiRelated):
         plot.recording = False
 
-        plot.timer.start(plot.updateInterval)  # Update plot every num(interval) milliseconds
+        # plot.timer.start(plot.updateInterval)  # Update plot every num(interval) milliseconds
 
-        # LE_ymin, LE_ymax, MM, AUTO, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, AUTO_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
         LE_ymin, LE_ymax, MM, SP, EP, SR, ER, SV = guiRelated
         LE_ymin.setEnabled(True)
         LE_ymax.setEnabled(True)
@@ -318,7 +323,6 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
     def endPlot(self, plot, guiRelated):
         plot.timer.stop()
 
-        # LE_ymin, LE_ymax, MM, AUTO, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, AUTO_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
         LE_ymin, LE_ymax, MM, SP, EP, SR, ER, SV, = guiRelated
         LE_ymin.setEnabled(True)
         LE_ymax.setEnabled(True)
@@ -329,39 +333,37 @@ class LIVE_PLOT_APP(QtWidgets.QMainWindow):
         SR.setEnabled(True)
         ER.setEnabled(False)
         SV.setEnabled(False)
-
-    def startRec(self, QDG, plot, guiRelated):
-        plot.recorded = []  # Reset recorded
-        plot.recording = True
-
-        plot.timer.start(plot.updateInterval)
-
-        # LE_ymin, LE_ymax, MM, AUTO, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, AUTO_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
-        LE_ymin, LE_ymax, MM, SP, EP, SR, ER, SV = guiRelated
-        LE_ymin.setEnabled(True)
-        LE_ymax.setEnabled(True)
-        MM.setEnabled(True)
-        # AUTO.setEnabled(True)
-        SP.setEnabled(False)
-        EP.setEnabled(False)
-        SR.setEnabled(False)
-        ER.setEnabled(True)
-        SV.setEnabled(False)
-
-    def endRec(self, QDG, plot, guiRelated):
-        plot.timer.stop()
-
-        LE_ymin, LE_ymax, MM, SP, EP, SR, ER, SV = guiRelated
-        # LE_ymin, LE_ymax, MM, AUTO, SP, EP, SR, ER, SV, LE_ymin_2, LE_ymax_2, MM_2, AUTO_2, SP_2, EP_2, SR_2, ER_2, SV_2 = guiRelated
-        LE_ymin.setEnabled(True)
-        LE_ymax.setEnabled(True)
-        MM.setEnabled(True)
-        # AUTO.setEnabled(True)
-        SP.setEnabled(True)
-        EP.setEnabled(False)
-        SR.setEnabled(True)
-        ER.setEnabled(False)
-        SV.setEnabled(True)
+    #
+    # def startRec(self, QDG, plot, guiRelated):
+    #     plot.recorded = []  # Reset recorded
+    #     plot.recording = True
+    #
+    #     plot.timer.start(plot.updateInterval)
+    #
+    #     LE_ymin, LE_ymax, MM, SP, EP, SR, ER, SV = guiRelated
+    #     LE_ymin.setEnabled(True)
+    #     LE_ymax.setEnabled(True)
+    #     MM.setEnabled(True)
+    #     # AUTO.setEnabled(True)
+    #     SP.setEnabled(False)
+    #     EP.setEnabled(False)
+    #     SR.setEnabled(False)
+    #     ER.setEnabled(True)
+    #     SV.setEnabled(False)
+    #
+    # def endRec(self, QDG, plot, guiRelated):
+    #     plot.timer.stop()
+    #
+    #     LE_ymin, LE_ymax, MM, SP, EP, SR, ER, SV = guiRelated
+    #     LE_ymin.setEnabled(True)
+    #     LE_ymax.setEnabled(True)
+    #     MM.setEnabled(True)
+    #     # AUTO.setEnabled(True)
+    #     SP.setEnabled(True)
+    #     EP.setEnabled(False)
+    #     SR.setEnabled(True)
+    #     ER.setEnabled(False)
+    #     SV.setEnabled(True)
 
 
 if __name__ == '__main__':

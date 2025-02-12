@@ -74,6 +74,8 @@ class NI():
     def start_thread(self):
         self.thread = Thread(target=self.DAQ)
         self.thread.start()
+
+    def end_thread(self):
         self.thread.join()
 
     # def stop_thread(self):
@@ -82,8 +84,6 @@ class NI():
     def DAQ(self):
         # while True:
         with nidaqmx.Task() as task:
-
-
             channel=task.ai_channels.add_ai_voltage_chan(
                 f"{self.device}/{self.channel}",
                 min_val=self.input_min, max_val=self.input_max)
@@ -101,63 +101,180 @@ class NI():
                 # print(self.q.get())
                 # print(self.q.get())
 
+#
+# class audio():
+#     def __init__(
+#             self, name, device,
+#             chunk, displayL):
+#         self.name = name  # "HY"
+#         self.fs = 44100  # Default for audio
+#         self.chunk = chunk
+#         self.history = np.zeros((displayL,))
+#
+#         self.q = multiprocessing.Queue()
+#
+#         self.p = pyaudio.PyAudio()
+#         # print("audio device:", device)
+#         self.inStream = self.p.open(format=pyaudio.paInt16,
+#                                     channels=1,
+#                                     rate=self.fs,
+#                                     input=True,
+#                                     frames_per_buffer=self.chunk,
+#                                     input_device_index=device)
+#
+#     def start_thread(self):
+#         self.thread = Thread(target=self.DAQ)
+#         self.thread.start()
+#         self.thread.join()
+#
+#     # def stop_thread(self):
+#     #     self.p.close(self.inStream)
+#     #     self.thread.join()
+#
+#     def start_DAQ(self):
+#         p = multiprocessing.Process(target=self.DAQ)
+#
+#     def DAQ(self):
+#         # while True:
+#         audioString = self.inStream.read(self.chunk)
+#         data = np.fromstring(audioString, dtype=np.int16)/1000
+#         data = data.tolist()
+#         self.q.put(data)
+#         # print("audio DAQ qsize:", self.q.qsize())
+#
+#
+# class getData():
+#     def __init__(self, q, updateInterval):
+#         self.new_data = None
+#         self.q = q
+#
+#         self.timer = QtCore.QTimer()
+#         self.updateInterval = updateInterval
+#
+#         # new_data = self.q.get(block=True)
+#         # self.get_all_queue_result()
+#
+#     def get_all_queue_result(self):  # Empty q
+#         self.new_data = self.q.get()
+#         while not self.q.empty():
+#             self.new_data += self.q.get()
 
-class audio():
+
+class QDG():
     def __init__(
-            self, name, device,
-            chunk, displayL):
-        self.name = name  # "HY"
-        self.fs = 44100  # Default for audio
-        self.chunk = chunk
-        self.history = np.zeros((displayL,))
+            self, sensor, updateInterval,
+    ):
+        self.sensor = sensor
+        self.q = sensor.q
+        # self.new_data = None
 
-        self.q = multiprocessing.Queue()
-
-        self.p = pyaudio.PyAudio()
-        # print("audio device:", device)
-        self.inStream = self.p.open(format=pyaudio.paInt16,
-                                    channels=1,
-                                    rate=self.fs,
-                                    input=True,
-                                    frames_per_buffer=self.chunk,
-                                    input_device_index=device)
-
-    def start_thread(self):
-        self.thread = Thread(target=self.DAQ)
-        self.thread.start()
-        self.thread.join()
-
-    # def stop_thread(self):
-    #     self.p.close(self.inStream)
-    #     self.thread.join()
-
-    def start_DAQ(self):
-        p = multiprocessing.Process(target=self.DAQ)
-
-    def DAQ(self):
-        # while True:
-        audioString = self.inStream.read(self.chunk)
-        data = np.fromstring(audioString, dtype=np.int16)/1000
-        data = data.tolist()
-        self.q.put(data)
-        # print("audio DAQ qsize:", self.q.qsize())
-
-
-class getData():
-    def __init__(self, q, updateInterval):
+        self.history = sensor.history
         self.new_data = None
-        self.q = q
+
+        self.fs = sensor.fs
 
         self.timer = QtCore.QTimer()
         self.updateInterval = updateInterval
 
-        # new_data = self.q.get(block=True)
-        # self.get_all_queue_result()
+        self.recording = False
+        self.recorded = []
 
-    def get_all_queue_result(self):  # Empty q
-        self.new_data = self.q.get()
-        while not self.q.empty():
-            self.new_data += self.q.get()
+    def start_thread(self):
+        self.thread = Thread(target=self.start)
+        self.thread.start()
+        self.thread.join()
+
+    def start(self):
+        block = True  # Works for vibra if True
+        # try:
+        self.new_data = self.q.get(block=block)
+        # print(len(new_data))
+        print("shape:", np.array(self.new_data).shape)
+
+        ###########################
+        shift = len(self.new_data)
+        self.history = np.roll(self.history, -shift, axis=0)
+        self.history[-shift:, ] = self.new_data
+
+        if self.recording:
+            self.recorded.extend(self.new_data)
+#
+#
+# class plotting_ver2():
+#     def __init__(
+#             self, sensor, canvas, updateInterval,
+#             linewidth=.2, color='white',
+#             ymin=None, ymax=None, tick=.5,
+#             plot_excluded = None,
+#     ):
+#         self.sensor = sensor
+#         self.q = sensor.q
+#         # self.new_data = None
+#
+#         self.plot_excluded = plot_excluded
+#
+#
+#         self.history = sensor.history
+#
+#         self.fs = sensor.fs
+#
+#         self.canvas = canvas
+#
+#         self.linewidth = linewidth
+#
+#         self.color=color
+#         if self.color=='white':
+#             self.color=(1,1,1)
+#         if self.color=='yellow':
+#             self.color=(1, 0.984, 0)
+#         if self.color=='light green':
+#             self.color=(0, 1, 0.29)
+#
+#         self.ref_plot = None
+#
+#         self.timer = QtCore.QTimer()
+#         self.updateInterval = updateInterval
+#
+#         self.recording = False
+#         self.recorded = []
+#
+#         self.auto = False
+#         self.ymin = ymin
+#         self.ymax = ymax
+#         # self.tick = (ymax-ymin)/10
+#         self.tick = tick
+#
+#         self.second_plot = False
+#
+#     def start_thread(self):
+#         self.thread = Thread(target=self.start)
+#         self.thread.start()
+#         self.thread.join()
+#
+#     def start(self):
+#         self.y = self.history[:]
+#         self.canvas.axes.set_facecolor((0, 0, 0))
+#
+#         # if self.recording:
+#         #     self.recorded.extend(self.new_data)
+#
+#         if self.ref_plot is None:
+#             plot_refs = self.canvas.axes.plot(self.y, color=self.color, linewidth=self.linewidth)
+#             self.ref_plot = plot_refs[0]
+#         else:
+#             self.ref_plot.set_ydata(self.y)
+#
+#         # Time domain
+#         self.canvas.axes.yaxis.grid(True, linestyle='--')
+#         start, end = self.canvas.axes.get_ylim()
+#         self.canvas.axes.yaxis.set_ticks(np.arange(start, end, self.tick))
+#         self.canvas.axes.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1f'))
+#         # if self.ymin and self.ymax:
+#         self.canvas.axes.set_ylim(ymin=self.ymin, ymax=self.ymax)
+#         # else:
+#         #     self.canvas.axes.relim()
+#         #     self.canvas.axes.autoscale_view()
+#         self.canvas.draw()
 
 
 class plotting():
@@ -217,6 +334,8 @@ class plotting():
     def start_thread(self):
         self.thread = Thread(target=self.start)
         self.thread.start()
+
+    def end_thread(self):
         self.thread.join()
 
     def start(self):
@@ -231,7 +350,9 @@ class plotting():
         shift = len(self.new_data)
         self.history = np.roll(self.history, -shift, axis=0)
         self.history[-shift:, ] = self.new_data
-        self.y = self.history[:]
+        # self.y = self.history[:]
+        # self.y = self.history[::100]
+        self.y = self.history[:2048]
         self.canvas.axes.set_facecolor((0, 0, 0))
 
         if self.recording:
@@ -264,10 +385,14 @@ class ML():
     def __init__(
             self,
             btn_displayDetSta,
+            HY=None, VB=None, AE=None,
             plot_HY=None, plot_VB=None, plot_AE=None,
             updateInterval=19,
     ):
         self.btn_displayDetSta = btn_displayDetSta
+        self.HY = HY
+        self.VB = VB
+        self.AE = AE
         self.plot_HY = plot_HY
         self.plot_VB = plot_VB
         self.plot_AE = plot_AE
@@ -282,8 +407,8 @@ class ML():
 
     def start(self):
         print("in ML function")
-        print(np.mean(self.plot_VB.new_data))
-        if np.mean(self.plot_VB.new_data) > -0.3:
+        print(np.mean(self.plot_HY.new_data))
+        if np.mean(self.plot_HY.new_data) > -0.3:
             gui_display_FEB.update_button(self.btn_displayDetSta, 'red', '정상', 'white')
         else:
             gui_display_FEB.update_button(self.btn_displayDetSta, 'green', '정상', 'white')
